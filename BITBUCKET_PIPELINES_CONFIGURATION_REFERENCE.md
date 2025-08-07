@@ -1,6 +1,44 @@
-# Bitbucket Pipelines 設定リファレンス - 完全ガイド
+# Bitbucket Pipelines 詳細リファレンス - 完全ガイド
 
-このドキュメントは、Bitbucket Pipelinesの各設定オプションについての包括的なリファレンスです。
+このドキュメントは、Bitbucket Pipelinesの各設定オプションについての包括的なリファレンスです。基本概念から高度な実装例まで、実用的な観点で解説しています。
+
+## 🚀 はじめに
+
+### Bitbucket Pipelinesとは
+Bitbucket Pipelinesは、Bitbucket Cloudに統合されたクラウドベースのCI/CDサービスです。
+
+#### 特徴
+- **統合性**: Bitbucket Cloudとネイティブ統合
+- **コンテナベース**: Dockerコンテナで実行
+- **設定ファイル**: `bitbucket-pipelines.yml`で定義
+- **スケーラビリティ**: 自動スケーリング対応
+- **セキュリティ**: 環境分離とシークレット管理
+
+#### 実行環境
+- **OS**: Ubuntu 20.04 LTS (デフォルト)
+- **アーキテクチャ**: x86_64、ARM64（Runtime v3）
+- **メモリ**: 4GB (1x) ～ 64GB (16x)
+- **CPU**: 2 vCPU ～ 32 vCPU
+- **ディスク**: 64GB ～ 256GB
+
+### パイプライン設定ファイルの基本構造
+
+```yaml
+# bitbucket-pipelines.yml の基本構造
+image: atlassian/default-image:latest
+
+options:
+  # グローバルオプション
+
+clone:
+  # Gitクローン設定
+
+definitions:
+  # 再利用可能な定義
+
+pipelines:
+  # パイプライン定義
+```
 
 ## 📑 目次
 
@@ -14,17 +52,23 @@
 8. [パイプライン開始条件](#8-パイプライン開始条件)
 9. [ステージオプション](#9-ステージオプション)
 10. [ステップオプション](#10-ステップオプション)
+11. [変数とシークレット管理](#11-変数とシークレット管理)
+12. [実践的な設定例とベストプラクティス](#12-実践的な設定例とベストプラクティス)
+13. [トラブルシューティング](#13-トラブルシューティング)
+14. [パフォーマンス最適化](#14-パフォーマンス最適化)
 
 ---
 
 ## 1. キャッシュとサービスコンテナー定義
 
 ### 概要
+
 `definitions`セクションでキャッシュとサービスコンテナーを定義し、パイプライン間で再利用可能にします。
 
 ### キーオプション
 
 #### **caches**
+
 ```yaml
 definitions:
   caches:
@@ -32,7 +76,58 @@ definitions:
     another-cache: ~/.npm
 ```
 
+#### 事前定義キャッシュ
+
+```yaml
+caches:
+  - docker         # /var/lib/docker
+  - node           # ~/.npm と ~/.cache/yarn
+  - npm            # ~/.npm
+  - yarn           # ~/.cache/yarn
+  - pip-cache      # ~/.cache/pip
+  - composer       # ~/.composer/cache
+  - gradle         # ~/.gradle/caches
+  - maven          # ~/.m2/repository
+  - sbt            # ~/.ivy2/cache と ~/.sbt
+  - dotnetcore     # ~/.nuget/packages
+```
+
+#### カスタムキャッシュ設定
+
+```yaml
+definitions:
+  caches:
+    # Node.js プロジェクト用
+    node-modules: node_modules
+    npm-cache: ~/.npm
+    yarn-cache: ~/.cache/yarn
+
+    # Python プロジェクト用
+    pip-packages: ~/.cache/pip
+    pipenv-venv: ~/.local/share/virtualenvs
+
+    # Java プロジェクト用
+    maven-deps: ~/.m2/repository
+    gradle-deps: ~/.gradle/caches
+
+    # PHP プロジェクト用
+    composer-vendor: vendor
+    composer-cache: ~/.composer/cache
+
+    # Ruby プロジェクト用
+    bundler-gems: vendor/bundle
+    gem-cache: ~/.gem
+
+    # .NET プロジェクト用
+    nuget-packages: ~/.nuget/packages
+
+    # Go プロジェクト用
+    go-modules: ~/go/pkg/mod
+    go-build: ~/.cache/go-build
+```
+
 #### **services**
+
 ```yaml
 definitions:
   services:
@@ -46,7 +141,228 @@ definitions:
       image: redis:6.0
 ```
 
+#### データベースサービスの詳細設定
+
+##### PostgreSQL
+
+```yaml
+definitions:
+  services:
+    postgres:
+      image: postgres:13
+      variables:
+        POSTGRES_DB: testdb
+        POSTGRES_USER: testuser
+        POSTGRES_PASSWORD: testpass
+        POSTGRES_HOST_AUTH_METHOD: trust
+      ports:
+        - "5432:5432"
+```
+
+##### MySQL
+
+```yaml
+definitions:
+  services:
+    mysql:
+      image: mysql:8.0
+      variables:
+        MYSQL_DATABASE: testdb
+        MYSQL_USER: testuser
+        MYSQL_PASSWORD: testpass
+        MYSQL_ROOT_PASSWORD: rootpass
+        MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      ports:
+        - "3306:3306"
+```
+
+##### MongoDB
+
+```yaml
+definitions:
+  services:
+    mongodb:
+      image: mongo:4.4
+      variables:
+        MONGO_INITDB_ROOT_USERNAME: admin
+        MONGO_INITDB_ROOT_PASSWORD: password
+        MONGO_INITDB_DATABASE: testdb
+      ports:
+        - "27017:27017"
+```
+
+#### キャッシュサービス
+
+##### Redis
+
+```yaml
+definitions:
+  services:
+    redis:
+      image: redis:6.2-alpine
+      ports:
+        - "6379:6379"
+```
+
+##### Memcached
+
+```yaml
+definitions:
+  services:
+    memcached:
+      image: memcached:1.6-alpine
+      ports:
+        - "11211:11211"
+```
+
+#### メッセージキューサービス
+
+##### RabbitMQ
+
+```yaml
+definitions:
+  services:
+    rabbitmq:
+      image: rabbitmq:3-management
+      variables:
+        RABBITMQ_DEFAULT_USER: guest
+        RABBITMQ_DEFAULT_PASS: guest
+      ports:
+        - "5672:5672"
+        - "15672:15672"
+```
+
+##### Apache Kafka
+
+```yaml
+definitions:
+  services:
+    zookeeper:
+      image: confluentinc/cp-zookeeper:latest
+      variables:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+
+    kafka:
+      image: confluentinc/cp-kafka:latest
+      variables:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      ports:
+        - "9092:9092"
+```
+
+#### 検索サービス
+
+##### Elasticsearch
+
+```yaml
+definitions:
+  services:
+    elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+      variables:
+        discovery.type: single-node
+        ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ports:
+        - "9200:9200"
+```
+
+### 言語別キャッシュ戦略
+
+#### Node.js プロジェクト
+
+```yaml
+definitions:
+  caches:
+    node-modules: node_modules
+    npm-global: ~/.npm
+
+pipelines:
+  default:
+    - step:
+        name: Node.js ビルド
+        caches:
+          - node-modules
+          - npm-global
+        script:
+          - npm ci
+          - npm run build
+          - npm test
+```
+
+#### Python プロジェクト
+
+```yaml
+definitions:
+  caches:
+    pip-cache: ~/.cache/pip
+    pipenv-deps: ~/.local/share/virtualenvs
+
+pipelines:
+  default:
+    - step:
+        name: Python ビルド
+        image: python:3.9
+        caches:
+          - pip-cache
+        script:
+          - pip install -r requirements.txt
+          - python -m pytest
+```
+
+#### Java プロジェクト
+
+```yaml
+definitions:
+  caches:
+    maven-cache: ~/.m2/repository
+    gradle-cache: ~/.gradle/caches
+
+pipelines:
+  default:
+    - step:
+        name: Java ビルド (Maven)
+        image: maven:3.8-openjdk-11
+        caches:
+          - maven-cache
+        script:
+          - mvn clean compile test
+
+    - step:
+        name: Java ビルド (Gradle)
+        image: gradle:7-jdk11
+        caches:
+          - gradle-cache
+        script:
+          - gradle clean build test
+```
+
+#### PHP プロジェクト
+
+```yaml
+definitions:
+  caches:
+    composer-cache: ~/.composer/cache
+    vendor-cache: vendor
+
+pipelines:
+  default:
+    - step:
+        name: PHP ビルド
+        image: php:8.0-cli
+        caches:
+          - composer-cache
+          - vendor-cache
+        script:
+          - composer install --no-dev --optimize-autoloader
+          - vendor/bin/phpunit
+```
+
 ### 使用例
+
 ```yaml
 definitions:
   caches:
@@ -150,6 +466,7 @@ image: atlassian/default-image:latest
 ```
 
 #### **プライベートイメージ（認証付き）**
+
 ```yaml
 image:
   name: my-registry.com/my-image:latest
@@ -157,7 +474,35 @@ image:
   password: $DOCKER_PASSWORD
 ```
 
+#### **Docker Hub プライベートリポジトリ**
+
+```yaml
+image:
+  name: mycompany/private-image:latest
+  username: $DOCKER_HUB_USERNAME
+  password: $DOCKER_HUB_PASSWORD
+```
+
+#### **Azure Container Registry**
+
+```yaml
+image:
+  name: myregistry.azurecr.io/myapp:latest
+  username: $ACR_USERNAME
+  password: $ACR_PASSWORD
+```
+
+#### **Google Container Registry**
+
+```yaml
+image:
+  name: gcr.io/my-project/my-image:latest
+  username: _json_key
+  password: $GCR_JSON_KEY
+```
+
 #### **AWS ECRイメージ**
+
 ```yaml
 image:
   name: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest
@@ -335,24 +680,42 @@ pipelines:
 ### 主要オプション
 
 #### **docker**
+
 ```yaml
 options:
   docker: true  # 全ステップでDockerサービスを有効化
 ```
 
+- **用途**: Dockerコマンドの実行、イメージのビルド
+- **制限**: 追加リソース消費
+- **注意点**: 必要な場合のみ有効化
+
 #### **max-time**
+
 ```yaml
 options:
   max-time: 60  # 最大実行時間（分）
 ```
 
+- **デフォルト**: 120分
+- **最大値**: 120分
+- **最小値**: 1分
+- **適用範囲**: パイプライン全体
+
 #### **size**
+
 ```yaml
 options:
   size: 2x      # リソースサイズ（1x, 2x, 4x, 8x, 16x）
 ```
 
+- **1x**: 4GB RAM, 通常のビルド用
+- **2x**: 8GB RAM, 大きなビルドやテスト用
+- **4x以上**: 非常に大きなビルド、並列処理用
+- **コスト**: 2xは1xの約2倍のビルドミニッツを消費
+
 #### **runtime**
+
 ```yaml
 options:
   runtime:
@@ -360,6 +723,10 @@ options:
       atlassian-ip-ranges: true
       arch: arm
 ```
+
+- **Runtime v2**: レガシー（非推奨）
+- **Runtime v3**: 改善されたパフォーマンスとセキュリティ
+- **移行**: 段階的に移行推奨
 
 ### リソース配分表
 
@@ -1100,9 +1467,852 @@ pipelines:
 
 ---
 
-## 🔗 関連リンク
+## 11. 変数とシークレット管理
+
+### 環境変数の種類
+
+#### システム提供変数
+
+```bash
+# Bitbucket提供の環境変数
+BITBUCKET_BRANCH            # 現在のブランチ名
+BITBUCKET_BUILD_NUMBER      # ビルド番号
+BITBUCKET_CLONE_DIR         # クローンディレクトリ
+BITBUCKET_COMMIT            # コミットハッシュ
+BITBUCKET_REPO_SLUG         # リポジトリスラッグ
+BITBUCKET_REPO_OWNER        # リポジトリオーナー
+BITBUCKET_REPO_FULL_NAME    # フルリポジトリ名
+BITBUCKET_WORKSPACE         # ワークスペース名
+BITBUCKET_PROJECT_KEY       # プロジェクトキー
+BITBUCKET_PR_ID             # プルリクエストID
+BITBUCKET_PR_DESTINATION_BRANCH # PRの宛先ブランチ
+BITBUCKET_TAG               # タグ名（タグビルド時）
+BITBUCKET_DEPLOYMENT_ENVIRONMENT # デプロイメント環境
+```
+
+#### カスタム変数の設定
+
+```yaml
+pipelines:
+  default:
+    - variables:
+        - name: DATABASE_URL
+          default: postgres://localhost:5432/mydb
+        - name: API_KEY
+          default: ""
+    - step:
+        name: 変数を使用
+        script:
+          - echo "Database: $DATABASE_URL"
+          - echo "API Key: $API_KEY"
+```
+
+#### 環境変数の使用例
+
+```yaml
+pipelines:
+  default:
+    - step:
+        name: 環境変数テスト
+        script:
+          - echo "ビルド番号: $BITBUCKET_BUILD_NUMBER"
+          - echo "ブランチ: $BITBUCKET_BRANCH"
+          - echo "コミット: $BITBUCKET_COMMIT"
+          - echo "リポジトリ: $BITBUCKET_REPO_FULL_NAME"
+```
+
+### シークレットとセキュリティ
+
+#### Repository Variables設定
+
+1. **リポジトリ設定** → **Repository variables**
+2. **環境変数**と**Secured変数**を設定
+3. **Secured変数**はログに出力されない
+
+#### Workspace Variables
+
+1. **ワークスペース設定** → **Workspace variables**
+2. **複数リポジトリで共有**可能
+3. **リポジトリ変数より優先度低**
+
+#### Deployment Variables
+
+```yaml
+- step:
+    name: 本番デプロイ
+    deployment: production
+    script:
+      - echo "Production URL: $PRODUCTION_URL"
+      - echo "API Key: $PRODUCTION_API_KEY"
+```
+
+---
+
+## 12. 実践的な設定例とベストプラクティス
+
+### 完全なCI/CDパイプライン例
+
+#### Node.js フルスタックアプリケーション
+
+```yaml
+image: node:18
+
+options:
+  max-time: 120
+  size: 2x
+
+definitions:
+  caches:
+    node-modules: node_modules
+    npm-cache: ~/.npm
+  services:
+    postgres:
+      image: postgres:13
+      variables:
+        POSTGRES_DB: testdb
+        POSTGRES_USER: testuser
+        POSTGRES_PASSWORD: testpass
+    redis:
+      image: redis:6-alpine
+
+pipelines:
+  default:
+    - step:
+        name: 📦 依存関係インストール
+        caches:
+          - node-modules
+          - npm-cache
+        script:
+          - npm ci
+        artifacts:
+          - node_modules/**
+
+    - parallel:
+        fail-fast: true
+        steps:
+          - step:
+              name: 🧪 単体テスト
+              caches:
+                - node-modules
+              script:
+                - npm run test:unit
+                - npm run coverage
+              artifacts:
+                - coverage/**
+                - test-results.xml
+
+          - step:
+              name: 🔍 コード品質チェック
+              caches:
+                - node-modules
+              script:
+                - npm run lint
+                - npm run type-check
+                - npm run audit
+
+          - step:
+              name: 🏗️ ビルド
+              caches:
+                - node-modules
+              script:
+                - npm run build
+              artifacts:
+                - dist/**
+
+    - step:
+        name: 🔬 統合テスト
+        services:
+          - postgres
+          - redis
+        script:
+          - npm run test:integration
+          - npm run test:e2e
+
+  branches:
+    develop:
+      - step:
+          name: 📦 依存関係インストール
+          caches:
+            - node-modules
+          script:
+            - npm ci
+
+      - parallel:
+          steps:
+            - step:
+                name: 🧪 テスト
+                script:
+                  - npm run test
+            - step:
+                name: 🏗️ ビルド
+                script:
+                  - npm run build
+                artifacts:
+                  - dist/**
+
+      - step:
+          name: 🚀 ステージングデプロイ
+          deployment: staging
+          script:
+            - pipe: atlassian/aws-s3-deploy:1.1.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                S3_BUCKET: $STAGING_S3_BUCKET
+                LOCAL_PATH: dist
+
+    main:
+      - step:
+          name: 📦 依存関係インストール
+          caches:
+            - node-modules
+          script:
+            - npm ci
+
+      - step:
+          name: 🏗️ プロダクションビルド
+          script:
+            - npm run build:prod
+          artifacts:
+            - dist/**
+
+      - step:
+          name: 🔐 セキュリティスキャン
+          script:
+            - pipe: atlassian/snyk-security-scan:0.3.0
+              variables:
+                SNYK_TOKEN: $SNYK_TOKEN
+                LANGUAGE: javascript
+
+      - step:
+          name: 🚀 本番デプロイ
+          deployment: production
+          trigger: manual
+          script:
+            - pipe: atlassian/aws-s3-deploy:1.1.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                S3_BUCKET: $PRODUCTION_S3_BUCKET
+                LOCAL_PATH: dist
+            - pipe: atlassian/aws-cloudfront-invalidate:0.6.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID
+
+  pull-requests:
+    '**':
+      - step:
+          name: 📦 依存関係インストール
+          caches:
+            - node-modules
+          script:
+            - npm ci
+
+      - parallel:
+          fail-fast: false
+          steps:
+            - step:
+                name: 🧪 テスト
+                script:
+                  - npm run test
+                  - npm run test:coverage
+
+            - step:
+                name: 🔍 コード品質
+                script:
+                  - npm run lint
+                  - npm run type-check
+
+            - step:
+                name: 🏗️ ビルド確認
+                script:
+                  - npm run build
+
+  tags:
+    'v*.*.*':
+      - step:
+          name: 📦 依存関係インストール
+          caches:
+            - node-modules
+          script:
+            - npm ci
+
+      - step:
+          name: 🏗️ リリースビルド
+          script:
+            - npm run build:prod
+          artifacts:
+            - dist/**
+
+      - step:
+          name: 📋 リリースノート生成
+          script:
+            - npm run generate-changelog
+            - git tag -l --format='%(contents)' $BITBUCKET_TAG > release-notes.md
+          artifacts:
+            - release-notes.md
+
+      - step:
+          name: 🚀 リリースデプロイ
+          deployment: production
+          script:
+            - echo "リリース $BITBUCKET_TAG をデプロイ"
+            - npm publish
+```
+
+#### Python Djangoアプリケーション
+
+```yaml
+image: python:3.11
+
+options:
+  max-time: 90
+  size: 2x
+
+definitions:
+  caches:
+    pip-cache: ~/.cache/pip
+  services:
+    postgres:
+      image: postgres:13
+      variables:
+        POSTGRES_DB: testdb
+        POSTGRES_USER: testuser
+        POSTGRES_PASSWORD: testpass
+    redis:
+      image: redis:6-alpine
+
+pipelines:
+  default:
+    - step:
+        name: 🐍 環境セットアップ
+        caches:
+          - pip-cache
+        script:
+          - pip install --upgrade pip
+          - pip install -r requirements.txt
+          - pip install -r requirements-dev.txt
+
+    - parallel:
+        steps:
+          - step:
+              name: 🧪 単体テスト
+              services:
+                - postgres
+                - redis
+              script:
+                - python manage.py test
+                - coverage run --source='.' manage.py test
+                - coverage xml
+              artifacts:
+                - coverage.xml
+
+          - step:
+              name: 🔍 コード品質
+              script:
+                - flake8 .
+                - black --check .
+                - isort --check-only .
+                - bandit -r . -f json -o bandit-report.json
+              artifacts:
+                - bandit-report.json
+
+          - step:
+              name: 🔒 セキュリティチェック
+              script:
+                - safety check
+                - pip-audit
+
+    - step:
+        name: 🚀 ステージングデプロイ
+        deployment: staging
+        script:
+          - echo "Djangoアプリをステージングにデプロイ"
+          - python manage.py collectstatic --noinput
+          - python manage.py migrate --check
+
+  branches:
+    main:
+      - step:
+          name: 🐍 環境セットアップ
+          caches:
+            - pip-cache
+          script:
+            - pip install -r requirements.txt
+
+      - step:
+          name: 🧪 フルテストスイート
+          services:
+            - postgres
+            - redis
+          script:
+            - python manage.py test
+            - python manage.py check --deploy
+
+      - step:
+          name: 🚀 本番デプロイ
+          deployment: production
+          trigger: manual
+          script:
+            - echo "本番環境へデプロイ"
+            - python manage.py collectstatic --noinput
+            - python manage.py migrate
+```
+
+### マイクロサービス アーキテクチャ
+
+```yaml
+image: node:18
+
+definitions:
+  caches:
+    node-modules: node_modules
+  services:
+    postgres:
+      image: postgres:13
+      variables:
+        POSTGRES_DB: microservices_db
+        POSTGRES_USER: user
+        POSTGRES_PASSWORD: password
+    redis:
+      image: redis:6-alpine
+    mongodb:
+      image: mongo:4.4
+
+pipelines:
+  default:
+    - parallel:
+        fail-fast: true
+        steps:
+          - step:
+              name: 🔧 API Gateway Service
+              script:
+                - cd services/api-gateway
+                - npm ci
+                - npm run test
+                - npm run build
+              artifacts:
+                - services/api-gateway/dist/**
+
+          - step:
+              name: 👤 User Service
+              services:
+                - postgres
+              script:
+                - cd services/user-service
+                - npm ci
+                - npm run test
+                - npm run build
+              artifacts:
+                - services/user-service/dist/**
+
+          - step:
+              name: 🛒 Order Service
+              services:
+                - mongodb
+              script:
+                - cd services/order-service
+                - npm ci
+                - npm run test
+                - npm run build
+              artifacts:
+                - services/order-service/dist/**
+
+          - step:
+              name: 💳 Payment Service
+              services:
+                - redis
+              script:
+                - cd services/payment-service
+                - npm ci
+                - npm run test
+                - npm run build
+              artifacts:
+                - services/payment-service/dist/**
+
+    - step:
+        name: 🐳 Dockerイメージビルド
+        services:
+          - docker
+        script:
+          - docker build -t api-gateway:$BITBUCKET_BUILD_NUMBER services/api-gateway
+          - docker build -t user-service:$BITBUCKET_BUILD_NUMBER services/user-service
+          - docker build -t order-service:$BITBUCKET_BUILD_NUMBER services/order-service
+          - docker build -t payment-service:$BITBUCKET_BUILD_NUMBER services/payment-service
+
+    - step:
+        name: 🔬 統合テスト
+        services:
+          - postgres
+          - mongodb
+          - redis
+        script:
+          - npm run test:integration
+```
+
+---
+
+## 13. トラブルシューティング
+
+### よくある問題と解決策
+
+#### 1. メモリ不足エラー
+
+**症状**: `ENOMEM: not enough memory` エラー
+
+**解決策**:
+```yaml
+options:
+  size: 2x  # または 4x
+
+# または個別ステップで
+- step:
+    size: 2x
+    script:
+      - npm run build
+```
+
+#### 2. ビルド時間の超過
+
+**症状**: `Build failed: Maximum allowed time exceeded`
+
+**解決策**:
+```yaml
+options:
+  max-time: 120  # 最大120分
+
+# キャッシュを活用
+definitions:
+  caches:
+    node-modules: node_modules
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - node-modules
+        script:
+          - npm ci  # npm install より高速
+```
+
+#### 3. Docker イメージプル失敗
+
+**症状**: `Error response from daemon: pull access denied`
+
+**解決策**:
+```yaml
+image:
+  name: private-registry.com/image:tag
+  username: $DOCKER_USERNAME
+  password: $DOCKER_PASSWORD
+```
+
+#### 4. 並列ステップでのアーティファクト共有問題
+
+**症状**: 前のステップのアーティファクトが見つからない
+
+**解決策**:
+```yaml
+- step:
+    name: ビルド
+    script:
+      - npm run build
+    artifacts:
+      - dist/**
+
+- parallel:
+    steps:
+      - step:
+          name: テスト1
+          # 並列ステップは前のアーティファクトを自動継承
+          script:
+            - ls dist/  # アーティファクトが利用可能
+      - step:
+          name: テスト2
+          artifacts:
+            download: false  # アーティファクトが不要な場合
+          script:
+            - npm run lint
+```
+
+#### 5. キャッシュが効かない
+
+**症状**: 毎回依存関係をダウンロード
+
+**解決策**:
+```yaml
+definitions:
+  caches:
+    # 正しいキャッシュパスを指定
+    node-cache: node_modules
+    npm-cache: ~/.npm
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - node-cache
+          - npm-cache
+        script:
+          - npm ci  # package-lock.jsonに基づく確定的なインストール
+```
+
+### デバッグのベストプラクティス
+
+#### 1. ログ出力の改善
+
+```yaml
+- step:
+    name: デバッグ情報出力
+    script:
+      - echo "=== 環境情報 ==="
+      - node --version
+      - npm --version
+      - echo "=== ディスク使用量 ==="
+      - df -h
+      - echo "=== メモリ使用量 ==="
+      - free -h
+      - echo "=== プロセス一覧 ==="
+      - ps aux
+```
+
+#### 2. 条件付きデバッグ
+
+```yaml
+- step:
+    script:
+      - |
+        if [ "$DEBUG" = "true" ]; then
+          set -x  # コマンドを表示
+          env | sort  # 環境変数を表示
+        fi
+      - npm run build
+```
+
+#### 3. エラー時の詳細情報収集
+
+```yaml
+- step:
+    script:
+      - npm test || (echo "テスト失敗時の詳細情報"; cat test-results.log; exit 1)
+    after-script:
+      - echo "=== 実行完了時刻: $(date) ==="
+      - echo "=== 最終ディスク使用量 ==="
+      - df -h
+```
+
+---
+
+## 14. パフォーマンス最適化
+
+### ビルド時間短縮のテクニック
+
+#### 1. 効果的なキャッシュ戦略
+
+```yaml
+definitions:
+  caches:
+    # 複数のキャッシュを組み合わせ
+    node-modules: node_modules
+    npm-cache: ~/.npm
+    cypress-cache: ~/.cache/Cypress
+
+pipelines:
+  default:
+    - step:
+        name: 依存関係の最適化インストール
+        caches:
+          - node-modules
+          - npm-cache
+        script:
+          # package-lock.jsonが変更された場合のみ再インストール
+          - |
+            if [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+              npm ci
+              cp package-lock.json node_modules/.package-lock.json
+            else
+              echo "依存関係は最新です"
+            fi
+```
+
+#### 2. 並列化の最適化
+
+```yaml
+- parallel:
+    fail-fast: true
+    steps:
+      # 短時間で完了するタスクを先に
+      - step:
+          name: � Lint (高速)
+          script:
+            - npm run lint
+
+      # 中程度の時間がかかるタスク
+      - step:
+          name: 🧪 単体テスト (中程度)
+          script:
+            - npm run test:unit
+
+      # 時間がかかるタスクを最後に
+      - step:
+          name: 🏗️ ビルド (低速)
+          script:
+            - npm run build
+```
+
+#### 3. 条件付き実行の活用
+
+```yaml
+- step:
+    name: フロントエンドテスト
+    condition:
+      changesets:
+        includePaths:
+          - "frontend/**"
+          - "package.json"
+          - "package-lock.json"
+    script:
+      - npm run test:frontend
+
+- step:
+    name: バックエンドテスト
+    condition:
+      changesets:
+        includePaths:
+          - "backend/**"
+          - "requirements.txt"
+    script:
+      - python -m pytest
+```
+
+#### 4. Dockerレイヤーキャッシング
+
+```yaml
+- step:
+    name: 最適化されたDockerビルド
+    services:
+      - docker
+    script:
+      # マルチステージビルドでキャッシュ効率化
+      - |
+        cat > Dockerfile.optimized << 'EOF'
+        # ベースイメージ
+        FROM node:18-alpine as base
+        WORKDIR /app
+
+        # 依存関係のインストール（変更頻度低）
+        FROM base as deps
+        COPY package*.json ./
+        RUN npm ci --only=production
+
+        # 開発依存関係（変更頻度低）
+        FROM base as dev-deps
+        COPY package*.json ./
+        RUN npm ci
+
+        # ビルド（変更頻度高）
+        FROM dev-deps as build
+        COPY . .
+        RUN npm run build
+
+        # 本番イメージ
+        FROM base as production
+        COPY --from=deps /app/node_modules ./node_modules
+        COPY --from=build /app/dist ./dist
+        COPY package*.json ./
+        EOF
+      - docker build -f Dockerfile.optimized -t myapp:$BITBUCKET_BUILD_NUMBER .
+```
+
+### リソース使用量の最適化
+
+#### 1. 適切なサイズ選択
+
+```yaml
+pipelines:
+  default:
+    # 軽量なタスクは1x
+    - step:
+        name: Lint
+        size: 1x
+        script:
+          - npm run lint
+
+    # ビルドやテストは2x
+    - step:
+        name: ビルドとテスト
+        size: 2x
+        script:
+          - npm run build
+          - npm test
+
+    # 大量のメモリが必要なタスクは4x
+    - step:
+        name: E2Eテスト
+        size: 4x
+        script:
+          - npm run test:e2e
+```
+
+#### 2. 効率的なサービス利用
+
+```yaml
+definitions:
+  services:
+    # 軽量なイメージを選択
+    postgres:
+      image: postgres:13-alpine
+    redis:
+      image: redis:6-alpine
+
+pipelines:
+  default:
+    - step:
+        name: 単体テスト（DB不要）
+        script:
+          - npm run test:unit  # サービス未使用
+
+    - step:
+        name: 統合テスト（DB必要）
+        services:
+          - postgres  # 必要な時のみサービス使用
+        script:
+          - npm run test:integration
+```
+
+---
+
+## �🔗 関連リンク
 
 - [Bitbucket Pipelines公式ドキュメント](https://support.atlassian.com/bitbucket-cloud/docs/bitbucket-pipelines-configuration-reference/)
 - [YAMLアンカーの使用](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)
 - [グロブパターンの使用](https://support.atlassian.com/bitbucket-cloud/docs/use-glob-patterns-on-the-pipelines-yaml-file/)
 - [変数とシークレット](https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/)
+- [Pipes マーケットプレイス](https://bitbucket.org/product/features/pipelines/integrations)
+- [Runtime v3 移行ガイド](https://support.atlassian.com/bitbucket-cloud/docs/migrate-to-pipelines-runtime-v3/)
+
+---
+
+## 📝 まとめ
+
+このリファレンスでは、Bitbucket Pipelinesの基本設定から高度な実装例まで、実用的な観点で解説しました。
+
+### 重要なポイント
+
+1. **キャッシュ戦略**: 適切なキャッシュ設定でビルド時間を大幅短縮
+2. **並列実行**: テストとビルドの並列化でパイプライン実行時間を最適化
+3. **条件付き実行**: 変更されたファイルのみを対象とした効率的な実行
+4. **セキュリティ**: 環境変数とシークレットの適切な管理
+5. **リソース管理**: 必要に応じたサイズとサービスの選択
+
+### ベストプラクティス
+
+- **小さく始めて段階的に拡張**
+- **キャッシュを積極的に活用**
+- **並列実行でパフォーマンス向上**
+- **セキュリティを最優先**
+- **継続的な最適化**
+
+Bitbucket Pipelinesを効果的に活用し、高品質なソフトウェアの継続的なデリバリーを実現しましょう。
