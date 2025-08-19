@@ -1339,7 +1339,7 @@ cursor-agent -p "権限設定を表示" --config permissions.json
 # 権限設定の修正
 {
   "permissions": {
-    "allow": ["Write(src/**/**)"]
+    "allow": ["Write(src/**/*)"]
   }
 }
 ```
@@ -1459,14 +1459,14 @@ time cursor-agent -p "大規模処理" --output-format json
 # メモリ使用量を監視しながら実行
 {
   cursor-agent -p "大量ファイル処理" --output-format json &
-  local pid=$!
+  pid="$!"
 
-  while kill -0 $pid 2>/dev/null; do
-    ps -p $pid -o pid,ppid,rss,vsz,comm
+  while kill -0 "$pid" 2>/dev/null; do
+    ps -p "$pid" -o pid,ppid,rss,vsz,comm
     sleep 5
   done
 
-  wait $pid
+  wait "$pid"
 }
 ```
 
