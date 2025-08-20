@@ -133,7 +133,7 @@ definitions:
   services:
     postgres:
       image: postgres:12
-      variables:
+      environment:
         POSTGRES_DB: mydb
         POSTGRES_USER: myuser
         POSTGRES_PASSWORD: mypassword
@@ -354,7 +354,7 @@ definitions:
   services:
     mysql:
       image: mysql:8.0
-      variables:
+      environment:
         MYSQL_DATABASE: testdb
         MYSQL_ROOT_PASSWORD: secret
 
@@ -829,9 +829,8 @@ pipelines:
                 - npm run test:integration
           - step:
               name: リント
-              fail-fast: false
               script:
-                - npm run lint
+                - npm run lint || true  # 失敗を無視
 ```
 
 ---
@@ -1325,12 +1324,12 @@ pipelines:
       - npm run cleanup
 ```
 
-#### **fail-fast**
+#### **エラー無視**
 ```yaml
 - step:
-    fail-fast: false  # 並列グループ内で失敗しても他を止めない
+    name: オプショナルテスト
     script:
-      - npm run optional-test
+      - npm run optional-test || true  # 失敗を無視
 ```
 
 #### **output-variables**
@@ -1357,7 +1356,7 @@ pipelines:
 - step:
     script:
       - pipe: atlassian/aws-s3-deploy:1.1.0
-        variables:
+        environment:
           AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
           AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
           S3_BUCKET: my-bucket
@@ -1376,7 +1375,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_PASSWORD: secret
 
@@ -1430,7 +1429,7 @@ pipelines:
         trigger: manual
         script:
           - pipe: atlassian/snyk-security-scan:0.3.0
-            variables:
+            environment:
               SNYK_TOKEN: $SNYK_TOKEN
 
     - step:
@@ -1551,7 +1550,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
@@ -1638,7 +1637,7 @@ pipelines:
           deployment: staging
           script:
             - pipe: atlassian/aws-s3-deploy:1.1.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 S3_BUCKET: $STAGING_S3_BUCKET
@@ -1663,7 +1662,7 @@ pipelines:
           name: 🔐 セキュリティスキャン
           script:
             - pipe: atlassian/snyk-security-scan:0.3.0
-              variables:
+              environment:
                 SNYK_TOKEN: $SNYK_TOKEN
                 LANGUAGE: javascript
 
@@ -1673,13 +1672,13 @@ pipelines:
           trigger: manual
           script:
             - pipe: atlassian/aws-s3-deploy:1.1.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 S3_BUCKET: $PRODUCTION_S3_BUCKET
                 LOCAL_PATH: dist
             - pipe: atlassian/aws-cloudfront-invalidate:0.6.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID
@@ -1760,7 +1759,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
@@ -1855,7 +1854,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: microservices_db
         POSTGRES_USER: user
         POSTGRES_PASSWORD: password

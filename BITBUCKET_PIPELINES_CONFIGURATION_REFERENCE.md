@@ -654,7 +654,7 @@ options:
 
 ### 制限事項
 - Docker CLIは自動でマウントされません
-- Bitbucket Pipelinesのデフォルトキャッシュは非推奨
+- デフォルトキャッシュは利用可能ですが、ファイルベースのカスタムキャッシュキーの使用を検討してください
 
 ### カスタムランナー設定
 ```yaml
@@ -1043,20 +1043,25 @@ branches:
           - npm run build:prod
 
 # ファイルパターン（条件付き実行）
-condition:
-  changesets:
-    includePaths:
-      - "app/**/*.js"
-      - "src/**/*.{ts,tsx}"
-    excludePaths:
-      - "**/*.md"
-      - "docs/**"
+# changeset条件はステップ内で使用する
 ```
 
 ### 使用例
 ```yaml
 pipelines:
   default:
+    - step:
+        name: フロントエンドビルド
+        condition:
+          changesets:
+            includePaths:
+              - "app/**/*.js"
+              - "src/**/*.{ts,tsx}"
+            excludePaths:
+              - "**/*.md"
+              - "docs/**"
+        script:
+          - npm run build
     - step:
         name: デフォルトビルド
         script:
@@ -1787,8 +1792,11 @@ pipelines:
     - step:
         name: SSH Access
         script:
-          # SSH鍵の設定（Bitbucket設定で事前に登録）
+          # SSH設定のディレクトリとファイル準備
+          - mkdir -p ~/.ssh
+          - chmod 700 ~/.ssh
           - ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          - chmod 644 ~/.ssh/known_hosts
           - git clone git@github.com:user/private-repo.git
           
           # カスタムSSH鍵
@@ -2510,6 +2518,8 @@ pipelines:
 ```yaml
 - step:
     name: Debug Step
+    services:
+      - docker
     script:
       - set -x  # コマンドの詳細出力
       - env | sort  # 環境変数の確認
@@ -2524,12 +2534,16 @@ pipelines:
     name: Error Handling
     script:
       - set -e  # エラー時即座に終了
+      - npm test
+    after-script:
       - |
-        if ! npm test; then
+        if [ $BITBUCKET_EXIT_CODE -ne 0 ]; then
           echo "Tests failed, sending notification"
-          curl -X POST $SLACK_WEBHOOK -d '{"text":"Tests failed!"}'
-          exit 1
         fi
+      - pipe: atlassian/slack-notify:2.1.0
+        variables:
+          WEBHOOK_URL: $SLACK_WEBHOOK
+          MESSAGE: "Pipeline status: $BITBUCKET_EXIT_CODE"
 ```
 
 ### 条件付き実行
