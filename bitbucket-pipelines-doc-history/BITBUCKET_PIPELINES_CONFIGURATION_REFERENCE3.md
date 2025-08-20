@@ -1,4 +1,3 @@
-🎯 **@analyst として分析します**
 # Bitbucket Pipelines 包括的詳細リファレンス
 
 ## 目次
@@ -227,7 +226,7 @@ step:
   name: "環境別デプロイ"
   condition:
     custom:
-      - $CI_COMMIT_REF_NAME == "main"
+      - $BITBUCKET_BRANCH == "main"
       - $DEPLOY_ENABLED == "true"
   script:
     - deploy.sh
@@ -337,9 +336,6 @@ step:
   # 手動トリガー
   trigger: manual
   
-  # 失敗時の動作
-  fail-fast: true
-  
   # 実行するランナー
   runs-on:
     - self.hosted
@@ -354,9 +350,6 @@ pipelines:
   default:
     # 並列ステップ
     - parallel:
-        # 最大並列数
-        limit: 3
-        
         # 高速失敗（一つでも失敗したら全体を停止）
         fail-fast: true
         
@@ -459,8 +452,6 @@ definitions:
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
         POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
-      volumes:
-        - /tmp/postgres-data:/var/lib/postgresql/data
     
     # MySQL
     mysql:
@@ -526,25 +517,13 @@ pipelines:
 Runtime v3は、Bitbucket Pipelinesの最新実行環境で、パフォーマンスとセキュリティが向上しています。
 
 ```yaml
+version: "3"
+
 options:
   runtime:
     cloud:
-      # Runtime v3の有効化
-      runtime: v3
-      
       # リソース制限
       memory: 4096  # MB
-      
-      # ネットワーク設定
-      network: 
-        # 外部接続制限
-        egress:
-          - type: allow
-            host: "*.npmjs.org"
-          - type: allow
-            host: "github.com"
-          - type: deny
-            host: "*"
 
 pipelines:
   default:
@@ -1016,4 +995,7 @@ pipelines:
       - step:
           name: "CloudFront キャッシュ無効化"
           script:
-            - pipe: atlassian/aws-cloudfront-invalidate:0
+            - pipe: atlassian/aws-cloudfront-invalidate:0.6.0
+              variables:
+                DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID
+                INVALIDATION_PATHS: "/*"

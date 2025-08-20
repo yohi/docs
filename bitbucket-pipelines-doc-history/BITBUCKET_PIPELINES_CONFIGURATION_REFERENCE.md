@@ -150,13 +150,11 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
         POSTGRES_HOST_AUTH_METHOD: trust
-      ports:
-        - "5432:5432"
 ```
 
 ##### MySQL
@@ -166,14 +164,12 @@ definitions:
   services:
     mysql:
       image: mysql:8.0
-      variables:
+      environment:
         MYSQL_DATABASE: testdb
         MYSQL_USER: testuser
         MYSQL_PASSWORD: testpass
         MYSQL_ROOT_PASSWORD: rootpass
         MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      ports:
-        - "3306:3306"
 ```
 
 ##### MongoDB
@@ -183,12 +179,10 @@ definitions:
   services:
     mongodb:
       image: mongo:4.4
-      variables:
+      environment:
         MONGO_INITDB_ROOT_USERNAME: admin
         MONGO_INITDB_ROOT_PASSWORD: password
         MONGO_INITDB_DATABASE: testdb
-      ports:
-        - "27017:27017"
 ```
 
 #### キャッシュサービス
@@ -200,8 +194,6 @@ definitions:
   services:
     redis:
       image: redis:6.2-alpine
-      ports:
-        - "6379:6379"
 ```
 
 ##### Memcached
@@ -211,8 +203,6 @@ definitions:
   services:
     memcached:
       image: memcached:1.6-alpine
-      ports:
-        - "11211:11211"
 ```
 
 #### メッセージキューサービス
@@ -224,12 +214,9 @@ definitions:
   services:
     rabbitmq:
       image: rabbitmq:3-management
-      variables:
+      environment:
         RABBITMQ_DEFAULT_USER: guest
         RABBITMQ_DEFAULT_PASS: guest
-      ports:
-        - "5672:5672"
-        - "15672:15672"
 ```
 
 ##### Apache Kafka
@@ -239,19 +226,17 @@ definitions:
   services:
     zookeeper:
       image: confluentinc/cp-zookeeper:latest
-      variables:
+      environment:
         ZOOKEEPER_CLIENT_PORT: 2181
         ZOOKEEPER_TICK_TIME: 2000
 
     kafka:
       image: confluentinc/cp-kafka:latest
-      variables:
+      environment:
         KAFKA_BROKER_ID: 1
         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      ports:
-        - "9092:9092"
 ```
 
 #### 検索サービス
@@ -263,11 +248,9 @@ definitions:
   services:
     elasticsearch:
       image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
-      variables:
+      environment:
         discovery.type: single-node
         ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-      ports:
-        - "9200:9200"
 ```
 
 ### 言語別キャッシュ戦略
@@ -799,7 +782,7 @@ pipelines:
           script: # ...
 ```
 
-#### **個別のfail-fast設定**
+#### **fail-fast設定**
 ```yaml
 - parallel:
     fail-fast: true
@@ -809,8 +792,8 @@ pipelines:
           script: # ...
       - step:
           name: オプショナルなテスト
-          fail-fast: false  # このステップの失敗は無視
-          script: # ...
+          script: 
+            - command_that_might_fail || true  # 失敗を無視したい場合のコマンドレベル制御
 ```
 
 ### デフォルト変数
@@ -2284,7 +2267,7 @@ pipelines:
 
 ---
 
-## �🔗 関連リンク
+## 🔗 関連リンク
 
 - [Bitbucket Pipelines公式ドキュメント](https://support.atlassian.com/bitbucket-cloud/docs/bitbucket-pipelines-configuration-reference/)
 - [YAMLアンカーの使用](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)

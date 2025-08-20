@@ -168,14 +168,9 @@ pipelines:
           script:
             - echo "Deploying to production"
             
-# 環境定義
-deployments:
-  production:
-    environment-type: production
-  staging:
-    environment-type: staging
-  test:
-    environment-type: test
+# デプロイメント設定は個別のステップで定義
+# deployment: production|staging|test をステップ内で指定
+# 環境の詳細設定はBitbucket UIで管理
 ```
 
 ### 4.2 主要デプロイメントパターン
@@ -302,16 +297,20 @@ pipelines:
 ```yaml
 pipelines:
   default:
+    # アーティファクト生成ステップ
     - step:
         name: Build
         artifacts:
           - dist/**          # 次のステップに渡される
           - reports/**
-          download: false    # ダウンロード可能にしない
-          paths:
-            - target/**.jar
+          - target/**.jar
+        script:
+          - npm run build
+    # アーティファクト利用ステップ
     - step:
         name: Deploy
+        artifacts:
+          download: false    # 自動ダウンロードを無効化
         script:
           - ls dist/         # 前のステップのアーティファクトを利用
 ```
@@ -322,7 +321,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: test
         POSTGRES_PASSWORD: test
@@ -330,8 +329,7 @@ definitions:
       image: redis:6
     elasticsearch:
       image: elasticsearch:7.9.3
-      memory: 512
-      variables:
+      environment:
         discovery.type: single-node
 
 pipelines:
@@ -363,6 +361,8 @@ pipelines:
 
 ### 7.1 Runtime v3（最新）
 ```yaml
+version: "3"
+
 options:
   runtime:
     cloud:

@@ -194,7 +194,7 @@ pipelines:
 options:
   runtime:
     cloud:
-      runtime: v3
+      version: "3"
 
 # カスタムランナー
 pipelines:
@@ -357,7 +357,7 @@ pipelines:
         script:
           - echo "Environment: $ENVIRONMENT"
           - echo "API URL: $API_URL"
-          - echo "Secret: $SECRET_TOKEN" # セキュアな変数
+          - echo "Secret token: set" # セキュアな変数の存在確認のみ
 
 # ステップレベル変数
 - step:
