@@ -13,7 +13,7 @@
 ## 🖥️ Cursor - AI搭載統合開発環境
 
 ### 🎯 基本情報
-- **開発会社**: Cursor社
+- **開発元**: Anysphere, Inc.（Cursor）
 - **種類**: AI統合開発環境（IDE）
 - **プラットフォーム**: Windows、macOS、Linux
 - **特化領域**: JavaScript/TypeScript、Web開発
@@ -67,7 +67,7 @@ here's some more context from [project management tool]:
 ## 💻 Cursor CLI - ターミナル版AI開発ツール
 
 ### 🎯 基本情報
-- **開発会社**: Cursor社
+- **開発元**: Anysphere, Inc.（Cursor）
 - **種類**: ターミナルベースAIツール
 - **ステータス**: **Beta版**（2024年12月時点）
 - **インストール**: `curl https://cursor.com/install -fsS | bash`
