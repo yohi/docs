@@ -21,13 +21,6 @@ Bitbucket Pipelinesは、Bitbucket Cloudに統合されたクラウドベース�
 - **CPU**: 2 vCPU ～ 32 vCPU
 - **ディスク**: 64GB ～ 256GB
 
-### 基本概念
-- **Pipeline**: 一連のビルド・テスト・デプロイプロセス
-- **Step**: パイプライン内の個別の実行単位
-- **Stage**: 複数のステップをグループ化した単位
-- **Pipe**: 再利用可能な事前定義されたコンポーネント
-- **Artifact**: ビルド成果物（ファイル、パッケージ等）
-
 ### パイプライン設定ファイルの基本構造
 
 ```yaml
@@ -60,15 +53,9 @@ pipelines:
 9. [ステージオプション](#9-ステージオプション)
 10. [ステップオプション](#10-ステップオプション)
 11. [変数とシークレット管理](#11-変数とシークレット管理)
-12. [デプロイメント](#12-デプロイメント)
-13. [高度な機能](#13-高度な機能)
-14. [セキュリティ・認証](#14-セキュリティ認証)
-15. [最適化・効率化](#15-最適化効率化)
-16. [テスト・品質保証](#16-テスト品質保証)
-17. [統合・拡張](#17-統合拡張)
-18. [実践的な設定例とベストプラクティス](#18-実践的な設定例とベストプラクティス)
-19. [トラブルシューティング](#19-トラブルシューティング)
-20. [パフォーマンス最適化](#20-パフォーマンス最適化)
+12. [実践的な設定例とベストプラクティス](#12-実践的な設定例とベストプラクティス)
+13. [トラブルシューティング](#13-トラブルシューティング)
+14. [パフォーマンス最適化](#14-パフォーマンス最適化)
 
 ---
 
@@ -146,7 +133,7 @@ definitions:
   services:
     postgres:
       image: postgres:12
-      variables:
+      environment:
         POSTGRES_DB: mydb
         POSTGRES_USER: myuser
         POSTGRES_PASSWORD: mypassword
@@ -163,13 +150,11 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
         POSTGRES_HOST_AUTH_METHOD: trust
-      ports:
-        - "5432:5432"
 ```
 
 ##### MySQL
@@ -179,14 +164,12 @@ definitions:
   services:
     mysql:
       image: mysql:8.0
-      variables:
+      environment:
         MYSQL_DATABASE: testdb
         MYSQL_USER: testuser
         MYSQL_PASSWORD: testpass
         MYSQL_ROOT_PASSWORD: rootpass
         MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      ports:
-        - "3306:3306"
 ```
 
 ##### MongoDB
@@ -196,12 +179,10 @@ definitions:
   services:
     mongodb:
       image: mongo:4.4
-      variables:
+      environment:
         MONGO_INITDB_ROOT_USERNAME: admin
         MONGO_INITDB_ROOT_PASSWORD: password
         MONGO_INITDB_DATABASE: testdb
-      ports:
-        - "27017:27017"
 ```
 
 #### キャッシュサービス
@@ -213,8 +194,6 @@ definitions:
   services:
     redis:
       image: redis:6.2-alpine
-      ports:
-        - "6379:6379"
 ```
 
 ##### Memcached
@@ -224,8 +203,6 @@ definitions:
   services:
     memcached:
       image: memcached:1.6-alpine
-      ports:
-        - "11211:11211"
 ```
 
 #### メッセージキューサービス
@@ -237,12 +214,9 @@ definitions:
   services:
     rabbitmq:
       image: rabbitmq:3-management
-      variables:
+      environment:
         RABBITMQ_DEFAULT_USER: guest
         RABBITMQ_DEFAULT_PASS: guest
-      ports:
-        - "5672:5672"
-        - "15672:15672"
 ```
 
 ##### Apache Kafka
@@ -252,19 +226,17 @@ definitions:
   services:
     zookeeper:
       image: confluentinc/cp-zookeeper:latest
-      variables:
+      environment:
         ZOOKEEPER_CLIENT_PORT: 2181
         ZOOKEEPER_TICK_TIME: 2000
 
     kafka:
       image: confluentinc/cp-kafka:latest
-      variables:
+      environment:
         KAFKA_BROKER_ID: 1
         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      ports:
-        - "9092:9092"
 ```
 
 #### 検索サービス
@@ -276,11 +248,9 @@ definitions:
   services:
     elasticsearch:
       image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
-      variables:
+      environment:
         discovery.type: single-node
         ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-      ports:
-        - "9200:9200"
 ```
 
 ### 言語別キャッシュ戦略
@@ -384,7 +354,7 @@ definitions:
   services:
     mysql:
       image: mysql:8.0
-      variables:
+      environment:
         MYSQL_DATABASE: testdb
         MYSQL_ROOT_PASSWORD: secret
 
@@ -460,34 +430,6 @@ pipelines:
     - step:
         type: pipeline
         custom: build-and-deploy
-```
-
-### 動的パイプライン
-
-```yaml
-pipelines:
-  default:
-    - step:
-        name: Generate Pipeline
-        script:
-          - echo "Generating dynamic pipeline"
-          - echo "image: node:18" > generated-pipeline.yml
-          - echo "pipelines:" >> generated-pipeline.yml
-          - echo "  default:" >> generated-pipeline.yml
-          - echo "    - step:" >> generated-pipeline.yml
-          - echo "        script:" >> generated-pipeline.yml
-          - echo "          - echo 'Dynamic step'" >> generated-pipeline.yml
-        artifacts:
-          - generated-pipeline.yml
-    
-    - step:
-        name: Run Dynamic Pipeline
-        script:
-          - pipe: atlassian/trigger-pipeline:5.0.0
-            variables:
-              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
-              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
-              PIPELINE_FILE: generated-pipeline.yml
 ```
 
 ---
@@ -654,23 +596,7 @@ options:
 
 ### 制限事項
 - Docker CLIは自動でマウントされません
-- デフォルトキャッシュは利用可能ですが、ファイルベースのカスタムキャッシュキーの使用を検討してください
-
-### カスタムランナー設定
-```yaml
-# カスタムランナー設定
-pipelines:
-  default:
-    - step:
-        runs-on:
-          - self.hosted
-          - linux
-          - large
-        script:
-          - echo "Running on self-hosted runner"
-          - docker --version
-          - kubectl version
-```
+- Bitbucket Pipelinesのデフォルトキャッシュは非推奨
 
 ---
 
@@ -725,21 +651,6 @@ pipelines:
           enabled: false
         script:
           - echo "Gitリポジトリなしで実行"
-```
-
-### Git クローン最適化
-```yaml
-clone:
-  depth: 50        # 浅いクローン
-  lfs: true        # Git LFS有効化
-  enabled: false   # クローンを無効化（カスタムクローン時）
-
-pipelines:
-  default:
-    - step:
-        name: Custom Clone
-        script:
-          - git clone --depth 1 $BITBUCKET_GIT_SSH_ORIGIN .
 ```
 
 ---
@@ -871,7 +782,7 @@ pipelines:
           script: # ...
 ```
 
-#### **個別のfail-fast設定**
+#### **fail-fast設定**
 ```yaml
 - parallel:
     fail-fast: true
@@ -881,8 +792,8 @@ pipelines:
           script: # ...
       - step:
           name: オプショナルなテスト
-          fail-fast: false  # このステップの失敗は無視
-          script: # ...
+          script: 
+            - command_that_might_fail || true  # 失敗を無視したい場合のコマンドレベル制御
 ```
 
 ### デフォルト変数
@@ -894,31 +805,6 @@ pipelines:
 - ワークスペースあたりの同時実行数制限あり
   - Standard/Premium: 600ステップ
   - Free: 10ステップ
-
-### 並列実行の最適化
-
-```yaml
-pipelines:
-  default:
-    - parallel:
-        - step:
-            name: Unit Tests
-            script:
-              - npm run test:unit
-        - step:
-            name: Lint
-            script:
-              - npm run lint
-        - step:
-            name: Security Scan
-            script:
-              - npm audit
-    
-    - step:
-        name: Integration Tests
-        script:
-          - npm run test:integration
-```
 
 ### 使用例
 ```yaml
@@ -943,9 +829,8 @@ pipelines:
                 - npm run test:integration
           - step:
               name: リント
-              fail-fast: false
               script:
-                - npm run lint
+                - npm run lint || true  # 失敗を無視
 ```
 
 ---
@@ -1026,42 +911,10 @@ pipelines:
             - echo "緊急修正デプロイ"
 ```
 
-### Globパターン
-```yaml
-# ブランチパターン
-branches:
-  'feature/*':
-    - step:
-        name: Feature Build
-        script:
-          - npm run build:dev
-  
-  'release/**':
-    - step:
-        name: Release Build
-        script:
-          - npm run build:prod
-
-# ファイルパターン（条件付き実行）
-# changeset条件はステップ内で使用する
-```
-
 ### 使用例
 ```yaml
 pipelines:
   default:
-    - step:
-        name: フロントエンドビルド
-        condition:
-          changesets:
-            includePaths:
-              - "app/**/*.js"
-              - "src/**/*.{ts,tsx}"
-            excludePaths:
-              - "**/*.md"
-              - "docs/**"
-        script:
-          - npm run build
     - step:
         name: デフォルトビルド
         script:
@@ -1471,12 +1324,12 @@ pipelines:
       - npm run cleanup
 ```
 
-#### **fail-fast**
+#### **エラー無視**
 ```yaml
 - step:
-    fail-fast: false  # 並列グループ内で失敗しても他を止めない
+    name: オプショナルテスト
     script:
-      - npm run optional-test
+      - npm run optional-test || true  # 失敗を無視
 ```
 
 #### **output-variables**
@@ -1503,7 +1356,7 @@ pipelines:
 - step:
     script:
       - pipe: atlassian/aws-s3-deploy:1.1.0
-        variables:
+        environment:
           AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
           AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
           S3_BUCKET: my-bucket
@@ -1522,7 +1375,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_PASSWORD: secret
 
@@ -1576,7 +1429,7 @@ pipelines:
         trigger: manual
         script:
           - pipe: atlassian/snyk-security-scan:0.3.0
-            variables:
+            environment:
               SNYK_TOKEN: $SNYK_TOKEN
 
     - step:
@@ -1675,291 +1528,9 @@ pipelines:
       - echo "API Key: $PRODUCTION_API_KEY"
 ```
 
-### 変数の使用例
-```yaml
-# リポジトリ変数の使用
-pipelines:
-  default:
-    - step:
-        name: Use Variables
-        script:
-          - echo "Environment: $ENVIRONMENT"
-          - echo "API URL: $API_URL"
-          - echo "Secret token: set" # セキュアな変数の存在確認のみ
-
-# ステップレベル変数
-- step:
-    name: Custom Variables
-    script:
-      - export CUSTOM_VAR="value"
-      - echo $CUSTOM_VAR
-```
-
 ---
 
-## 12. デプロイメント
-
-### AWS デプロイメント
-```yaml
-# S3デプロイ
-- step:
-    name: Deploy to S3
-    deployment: production
-    script:
-      - pipe: atlassian/aws-s3-deploy:1.1.0
-        variables:
-          AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-          AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-          AWS_DEFAULT_REGION: us-west-2
-          S3_BUCKET: my-website-bucket
-          LOCAL_PATH: dist
-
-# EKS (Kubernetes) デプロイ
-- step:
-    name: Deploy to EKS
-    deployment: production
-    script:
-      - pipe: atlassian/aws-eks-kubectl-run:2.2.0
-        variables:
-          AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-          AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-          AWS_DEFAULT_REGION: us-west-2
-          CLUSTER_NAME: my-cluster
-          KUBECTL_COMMAND: 'apply'
-          RESOURCE_PATH: 'k8s/'
-```
-
-### その他プラットフォーム
-```yaml
-# Heroku デプロイ
-- step:
-    name: Deploy to Heroku
-    deployment: production
-    script:
-      - pipe: atlassian/heroku-deploy:1.1.1
-        variables:
-          HEROKU_API_KEY: $HEROKU_API_KEY
-          HEROKU_APP_NAME: my-app
-
-# Firebase デプロイ
-- step:
-    name: Deploy to Firebase
-    script:
-      - pipe: atlassian/firebase-deploy:1.0.0
-        variables:
-          FIREBASE_TOKEN: $FIREBASE_TOKEN
-          PROJECT_ID: my-project
-
-# npm パッケージ公開
-- step:
-    name: Publish to npm
-    script:
-      - pipe: atlassian/npm-publish:0.3.1
-        variables:
-          NPM_TOKEN: $NPM_TOKEN
-```
-
----
-
-## 13. 高度な機能
-
-### 子パイプライン
-```yaml
-# メインパイプライン
-pipelines:
-  default:
-    - step:
-        name: Trigger Child Pipeline
-        script:
-          - pipe: atlassian/trigger-pipeline:5.0.0
-            variables:
-              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
-              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
-              REPOSITORY: myteam/child-repo
-              REF_TYPE: branch
-              REF_NAME: main
-              CUSTOM_PIPELINE_NAME: child-pipeline
-```
-
----
-
-## 14. セキュリティ・認証
-
-### SSH認証
-```yaml
-pipelines:
-  default:
-    - step:
-        name: SSH Access
-        script:
-          # SSH設定のディレクトリとファイル準備
-          - mkdir -p ~/.ssh
-          - chmod 700 ~/.ssh
-          - ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-          - chmod 644 ~/.ssh/known_hosts
-          - git clone git@github.com:user/private-repo.git
-          
-          # カスタムSSH鍵
-          - echo $CUSTOM_SSH_KEY | base64 -d > ~/.ssh/custom_key
-          - chmod 600 ~/.ssh/custom_key
-          - ssh -i ~/.ssh/custom_key user@server
-```
-
-### OpenID Connect (OIDC)
-```yaml
-# AWS OIDC認証
-- step:
-    name: Deploy with OIDC
-    oidc: true
-    script:
-      - export AWS_ROLE_ARN="arn:aws:iam::123456789012:role/BitbucketRole"
-      - export AWS_WEB_IDENTITY_TOKEN_FILE="/opt/atlassian/pipelines/agent/tmp/web-identity-token"
-      - aws sts get-caller-identity
-      - aws s3 ls
-```
-
----
-
-## 15. 最適化・効率化
-
-### YAML アンカー
-```yaml
-definitions:
-  steps:
-    - step: &build-step
-        name: Build
-        image: node:18
-        caches:
-          - node
-        script:
-          - npm install
-          - npm run build
-    
-    - step: &test-step
-        name: Test
-        image: node:18
-        caches:
-          - node
-        script:
-          - npm install
-          - npm test
-
-pipelines:
-  default:
-    - <<: *build-step
-    - <<: *test-step
-  
-  branches:
-    develop:
-      - <<: *build-step
-      - <<: *test-step
-      - step:
-          name: Deploy to Dev
-          script:
-            - echo "Deploying to development"
-```
-
----
-
-## 16. テスト・品質保証
-
-### テスト実行
-```yaml
-pipelines:
-  default:
-    - step:
-        name: Unit Tests
-        script:
-          - npm run test:unit
-          - npm run test:coverage
-        artifacts:
-          - coverage/**
-          - test-results.xml
-    
-    - step:
-        name: Integration Tests
-        services:
-          - postgres
-        script:
-          - npm run test:integration
-          - npm run test:e2e
-```
-
-### テストレポート
-```yaml
-# JUnit形式のテストレポート
-- step:
-    name: Test with Reports
-    script:
-      - npm test -- --reporter=mocha-junit-reporter
-    artifacts:
-      - test-results.xml
-    # Bitbucketがテスト結果を自動的に解析・表示
-```
-
-### 品質ゲート
-```yaml
-- step:
-    name: Quality Gate
-    script:
-      - npm run lint
-      - npm run test:coverage
-      - npm run security:scan
-      # カバレッジ閾値チェック
-      - if [ $(cat coverage/coverage-summary.json | jq '.total.lines.pct') -lt 80 ]; then exit 1; fi
-```
-
----
-
-## 17. 統合・拡張
-
-### Pipes の活用
-```yaml
-# 定義済みPipes
-- step:
-    name: Slack Notification
-    script:
-      - pipe: atlassian/slack-notify:2.1.0
-        variables:
-          WEBHOOK_URL: $SLACK_WEBHOOK
-          MESSAGE: 'Build completed successfully!'
-
-# カスタムPipe
-- step:
-    name: Custom Pipe
-    script:
-      - pipe: docker://myregistry/custom-pipe:latest
-        variables:
-          CUSTOM_VAR: $CUSTOM_VALUE
-```
-
-### 外部サービス連携
-```yaml
-# Jira連携
-- step:
-    name: Update Jira
-    script:
-      - pipe: atlassian/jira-transition:1.0.0
-        variables:
-          JIRA_BASE_URL: $JIRA_BASE_URL
-          JIRA_USER_EMAIL: $JIRA_USER_EMAIL
-          JIRA_API_TOKEN: $JIRA_API_TOKEN
-          ISSUE_KEYS: 'PROJ-123,PROJ-124'
-          TRANSITION_NAME: 'Done'
-
-# SonarQube連携
-- step:
-    name: SonarQube Analysis
-    script:
-      - pipe: sonarsource/sonarqube-scan:1.0.0
-        variables:
-          SONAR_HOST_URL: $SONAR_HOST_URL
-          SONAR_TOKEN: $SONAR_TOKEN
-```
-
----
-
-## 18. 実践的な設定例とベストプラクティス
+## 12. 実践的な設定例とベストプラクティス
 
 ### 完全なCI/CDパイプライン例
 
@@ -1979,7 +1550,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
@@ -2066,7 +1637,7 @@ pipelines:
           deployment: staging
           script:
             - pipe: atlassian/aws-s3-deploy:1.1.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 S3_BUCKET: $STAGING_S3_BUCKET
@@ -2091,7 +1662,7 @@ pipelines:
           name: 🔐 セキュリティスキャン
           script:
             - pipe: atlassian/snyk-security-scan:0.3.0
-              variables:
+              environment:
                 SNYK_TOKEN: $SNYK_TOKEN
                 LANGUAGE: javascript
 
@@ -2101,13 +1672,13 @@ pipelines:
           trigger: manual
           script:
             - pipe: atlassian/aws-s3-deploy:1.1.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 S3_BUCKET: $PRODUCTION_S3_BUCKET
                 LOCAL_PATH: dist
             - pipe: atlassian/aws-cloudfront-invalidate:0.6.0
-              variables:
+              environment:
                 AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
                 AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
                 DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID
@@ -2188,7 +1759,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: testdb
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
@@ -2283,7 +1854,7 @@ definitions:
   services:
     postgres:
       image: postgres:13
-      variables:
+      environment:
         POSTGRES_DB: microservices_db
         POSTGRES_USER: user
         POSTGRES_PASSWORD: password
@@ -2365,7 +1936,7 @@ pipelines:
 
 ---
 
-## 19. トラブルシューティング
+## 13. トラブルシューティング
 
 ### よくある問題と解決策
 
@@ -2514,56 +2085,9 @@ pipelines:
       - df -h
 ```
 
-### デバッグ・ログ設定
-```yaml
-- step:
-    name: Debug Step
-    services:
-      - docker
-    script:
-      - set -x  # コマンドの詳細出力
-      - env | sort  # 環境変数の確認
-      - df -h  # ディスク使用量
-      - free -m  # メモリ使用量
-      - docker images  # Dockerイメージ一覧
-```
-
-### エラーハンドリング
-```yaml
-- step:
-    name: Error Handling
-    script:
-      - set -e  # エラー時即座に終了
-      - npm test
-    after-script:
-      - |
-        if [ $BITBUCKET_EXIT_CODE -ne 0 ]; then
-          echo "Tests failed, sending notification"
-        fi
-      - pipe: atlassian/slack-notify:2.1.0
-        variables:
-          WEBHOOK_URL: $SLACK_WEBHOOK
-          MESSAGE: "Pipeline status: $BITBUCKET_EXIT_CODE"
-```
-
-### 条件付き実行
-```yaml
-- step:
-    name: Conditional Step
-    condition:
-      changesets:
-        includePaths:
-          - "src/**"
-        excludePaths:
-          - "docs/**"
-    script:
-      - echo "Source code changed, running build"
-      - npm run build
-```
-
 ---
 
-## 20. パフォーマンス最適化
+## 14. パフォーマンス最適化
 
 ### ビルド時間短縮のテクニック
 
@@ -2603,7 +2127,7 @@ pipelines:
     steps:
       # 短時間で完了するタスクを先に
       - step:
-          name: 🔍 Lint (高速)
+          name: � Lint (高速)
           script:
             - npm run lint
 
@@ -2744,59 +2268,12 @@ pipelines:
 
 ## 🔗 関連リンク
 
-### 基本ドキュメント
-- [Build, test, and deploy with Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/build-test-and-deploy-with-pipelines/)
-- [Get started with Bitbucket Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/get-started-with-bitbucket-pipelines/)
-- [Configure your first pipeline](https://support.atlassian.com/bitbucket-cloud/docs/configure-your-first-pipeline/)
-
-### 設定・構成
-- [Bitbucket Pipelines configuration reference](https://support.atlassian.com/bitbucket-cloud/docs/bitbucket-pipelines-configuration-reference/)
-- [Global options](https://support.atlassian.com/bitbucket-cloud/docs/global-options/)
-- [Pipeline start conditions](https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/)
-- [Step options](https://support.atlassian.com/bitbucket-cloud/docs/step-options/)
-- [Stage options](https://support.atlassian.com/bitbucket-cloud/docs/stage-options/)
-- [Use glob patterns on the Pipelines yaml file](https://support.atlassian.com/bitbucket-cloud/docs/use-glob-patterns-on-the-pipelines-yaml-file/)
-- [YAML anchors](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)
-
-### 実行環境
-- [Docker image options](https://support.atlassian.com/bitbucket-cloud/docs/docker-image-options/)
-- [Use Docker images as build environments](https://support.atlassian.com/bitbucket-cloud/docs/use-docker-images-as-build-environments/)
-- [Databases and service containers](https://support.atlassian.com/bitbucket-cloud/docs/databases-and-service-containers/)
-- [Enable and use Runtime v3](https://support.atlassian.com/bitbucket-cloud/docs/enable-and-use-runtime-v3/)
-- [Runners](https://support.atlassian.com/bitbucket-cloud/docs/runners/)
-
-### デプロイメント
-- [Access Pipelines deployment guides](https://support.atlassian.com/bitbucket-cloud/docs/access-pipelines-deployment-guides/)
-- [Deployments](https://support.atlassian.com/bitbucket-cloud/docs/deployments/)
-- [Deploy on AWS using Bitbucket Pipelines OpenID Connect](https://support.atlassian.com/bitbucket-cloud/docs/deploy-on-aws-using-bitbucket-pipelines-openid-connect/)
-
-### 高度な機能
-- [Parallel step options](https://support.atlassian.com/bitbucket-cloud/docs/parallel-step-options/)
-- [Child pipeline step options](https://support.atlassian.com/bitbucket-cloud/docs/child-pipeline-step-options/)
-- [Dynamic pipelines](https://support.atlassian.com/bitbucket-cloud/docs/dynamic-pipelines/)
-- [Pipeline triggers](https://support.atlassian.com/bitbucket-cloud/docs/pipeline-triggers/)
-
-### セキュリティ・認証
-- [Variables and secrets](https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/)
-- [Using SSH keys in Bitbucket Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/using-ssh-keys-in-bitbucket-pipelines/)
-
-### 最適化
-- [Cache dependencies](https://support.atlassian.com/bitbucket-cloud/docs/cache-dependencies/)
-- [Cache, service container, and export pipelines definitions](https://support.atlassian.com/bitbucket-cloud/docs/cache-and-service-container-definitions/)
-- [Use artifacts in steps](https://support.atlassian.com/bitbucket-cloud/docs/use-artifacts-in-steps/)
-- [Git clone behavior](https://support.atlassian.com/bitbucket-cloud/docs/git-clone-behavior/)
-
-### テスト・品質
-- [Testing](https://support.atlassian.com/bitbucket-cloud/docs/testing/)
-
-### 統合・拡張
-- [Use pipes in Bitbucket Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/use-pipes-in-bitbucket-pipelines/)
-- [Integrations](https://support.atlassian.com/bitbucket-cloud/docs/integrations/)
-- [Share Pipelines Configurations](https://support.atlassian.com/bitbucket-cloud/docs/share-pipelines-configurations/)
-
-### その他
-- [Push back to your repository](https://support.atlassian.com/bitbucket-cloud/docs/push-back-to-your-repository/)
-- [Migrate to Bitbucket Pipelines](https://support.atlassian.com/bitbucket-cloud/docs/migrate-to-bitbucket-pipelines/)
+- [Bitbucket Pipelines公式ドキュメント](https://support.atlassian.com/bitbucket-cloud/docs/bitbucket-pipelines-configuration-reference/)
+- [YAMLアンカーの使用](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)
+- [グロブパターンの使用](https://support.atlassian.com/bitbucket-cloud/docs/use-glob-patterns-on-the-pipelines-yaml-file/)
+- [変数とシークレット](https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/)
+- [Pipes マーケットプレイス](https://bitbucket.org/product/features/pipelines/integrations)
+- [Runtime v3 移行ガイド](https://support.atlassian.com/bitbucket-cloud/docs/migrate-to-pipelines-runtime-v3/)
 
 ---
 
